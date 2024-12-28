@@ -69,90 +69,93 @@
         const db = getFirestore(app);
 
         const text = document.getElementById('text');
-        const btnAdd = document.getElementById('btnAdd');
+const btnAdd = document.getElementById('btnAdd');
+const tbody = document.getElementById('tbody');
 
-        btnAdd.addEventListener('click', () => {
-            const textValue = text.value;
-            addDoc(collection(db, "Text"), {
-                text: textValue
-            }).then(() => {
+// Add new text to Firestore
+btnAdd.addEventListener('click', () => {
+    const textValue = text.value.trim();
+    if (textValue) {
+        addDoc(collection(db, "Text"), { text: textValue })
+            .then(() => {
                 alert('Text added successfully');
-                fetchText();
-            }).catch((error) => {
+                text.value = ''; // Clear input
+            })
+            .catch((error) => {
                 alert("Error adding text:", error);
+            });
+    } else {
+        alert('Please enter some text!');
+    }
+});
+
+// Real-time listener for Firestore collection
+function listenToTextChanges() {
+    const textRef = collection(db, "Text");
+    onSnapshot(textRef, (snapshot) => {
+        tbody.innerHTML = ''; // Clear table body
+        snapshot.forEach((doc) => {
+            const data = doc.data();
+            data.id = doc.id;
+
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${data.id}</td>
+                <td>${data.text}</td>
+                <td><button type="button" class="btn btn-primary btn-edit" data-id="${data.id}" data-text="${data.text}">Edit</button></td>
+                <td><button type="button" class="btn btn-danger btn-delete" data-id="${data.id}">Delete</button></td>
+            `;
+            tbody.appendChild(row);
+        });
+
+        // Add event listeners for Edit and Delete buttons
+        document.querySelectorAll('.btn-edit').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const id = e.target.getAttribute('data-id');
+                const currentText = e.target.getAttribute('data-text');
+                editText(id, currentText);
             });
         });
 
-        const tbody = document.getElementById('tbody');
+        document.querySelectorAll('.btn-delete').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const id = e.target.getAttribute('data-id');
+                deleteText(id);
+            });
+        });
+    });
+}
 
-        function fetchText() {
-            const textRef = collection(db, "Text");
-            getDocs(textRef)
-                .then((querySnapshot) => {
-                    tbody.innerHTML = '';
-                    querySnapshot.forEach((doc) => {
-                        const data = doc.data();
-                        data.id = doc.id;
+// Edit text functionality
+function editText(id, currentText) {
+    const newText = prompt("Edit text:", currentText);
+    if (newText !== null && newText !== currentText) {
+        const docRef = doc(db, "Text", id);
+        updateDoc(docRef, { text: newText })
+            .then(() => {
+                alert("Text updated successfully");
+            })
+            .catch((error) => {
+                alert("Error updating text:", error);
+            });
+    }
+}
 
-                        const row = document.createElement('tr');
-                        row.innerHTML = `
-                    <td>${data.id}</td> 
-                    <td>${data.text}</td> 
-                    <td><button type="button" class="btn btn-primary btn-edit" data-id="${data.id}" data-text="${data.text}">Edit</button></td> 
-                    <td><button type="button" class="btn btn-danger btn-delete" data-id="${data.id}">Delete</button></td>
-                `;
-                        tbody.appendChild(row);
-                    });
+// Delete text functionality
+function deleteText(id) {
+    const docRef = doc(db, "Text", id);
+    deleteDoc(docRef)
+        .then(() => {
+            alert("Text deleted successfully");
+        })
+        .catch((error) => {
+            alert("Error deleting text:", error);
+        });
+}
 
-                    // Add event listeners for Edit and Delete buttons
-                    document.querySelectorAll('.btn-edit').forEach(button => {
-                        button.addEventListener('click', (e) => {
-                            const id = e.target.getAttribute('data-id');
-                            const currentText = e.target.getAttribute('data-text');
-                            editText(id, currentText);
-                        });
-                    });
+// Start listening for real-time changes
+listenToTextChanges();
 
-                    document.querySelectorAll('.btn-delete').forEach(button => {
-                        button.addEventListener('click', (e) => {
-                            const id = e.target.getAttribute('data-id');
-                            deleteText(id);
-                        });
-                    });
-                })
-                .catch((error) => {
-                    alert("Error getting documents:", error);
-                });
-        }
-
-        function editText(id, currentText) {
-            const newText = prompt("Edit text:", currentText);
-            if (newText !== null && newText !== currentText) {
-                const docRef = doc(db, "Text", id);
-                updateDoc(docRef, { text: newText })
-                    .then(() => {
-                        alert("Text updated successfully");
-                        fetchText();
-                    })
-                    .catch((error) => {
-                        alert("Error updating text:", error);
-                    });
-            }
-        }
-
-        function deleteText(id) {
-            const docRef = doc(db, "Text", id);
-            deleteDoc(docRef)
-                .then(() => {
-                    alert("Text deleted successfully");
-                    fetchText();
-                })
-                .catch((error) => {
-                    alert("Error deleting text:", error);
-                });
-        }
-
-        fetchText();
 
     </script>
 </body>
