@@ -84,6 +84,8 @@ btnAdd.addEventListener('click', () => {
             .catch((error) => {
                 alert("Error adding text:", error);
             });
+        // Start listening for real-time changes
+listenToTextChanges();
     } else {
         alert('Please enter some text!');
     }
